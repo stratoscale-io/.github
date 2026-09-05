@@ -2,8 +2,8 @@
 
 **Cloud-native geospatial — without the copy.**
 
-Query petabyte-scale Zarr and NetCDF archives with SQL, directly in object
-storage. No pipelines to copy the data into a database first.
+We build tools that query Zarr and NetCDF archives with SQL, right where they
+sit in object storage. You don't copy anything into a database first.
 
 [stratoscale.io](https://stratoscale.io) · [Blog](https://stratoscale.io/blog) · [hi@stratoscale.io](mailto:hi@stratoscale.io)
 
@@ -11,26 +11,30 @@ storage. No pipelines to copy the data into a database first.
 
 ## Why
 
-Earth-observation and climate archives are already chunked, compressed, and
-sitting in object storage. The usual next step — copy them into a warehouse so
-they can be queried — costs egress, duplicated petabytes, and a copy that goes
-stale the moment it lands. We build the engine and the servers that let you
-skip that step.
+Climate and Earth-observation archives already sit in object storage, chunked
+and compressed. The usual advice is to copy them into a warehouse before you
+can query them. That costs egress, duplicates petabytes, and the copy is stale
+the day it lands.
 
-Open formats, permissively licensed: Zarr, Apache Arrow, Apache DataFusion.
+We'd rather send the query to the data. That's what we build.
+
+Everything uses open formats: Zarr, Apache Arrow, Apache DataFusion.
 
 ## Projects
 
 ### [zarr-datafusion](https://github.com/stratoscale-io/zarr-datafusion) · Rust
 
-SQL on Zarr-native array data, powered by
-[Apache DataFusion](https://datafusion.apache.org/). Zarr v2 and v3, Arrow
-schema inferred from store metadata, projection/limit/filter pushdown that
-prunes chunks before they are read, `MIN`/`MAX`/`COUNT` answered from
-statistics, chunk-level parallelism, and reads straight from GCS and S3.
-VirtualiZarr reference stores put the same SQL over NetCDF and GRIB byte
-ranges. Ships an interactive CLI with an extended `DESCRIBE` and per-query I/O
-statistics; optional multi-node execution via `datafusion-distributed`.
+A SQL engine for Zarr-native array data, built on
+[Apache DataFusion](https://datafusion.apache.org/).
+
+It reads Zarr v2 and v3, and infers the Arrow schema from the store's own
+metadata. Filters and projections push down, so a query skips the chunks it
+doesn't need. `MIN`, `MAX` and `COUNT` come from statistics without reading any
+data. Scans run in parallel and read straight from GCS and S3. VirtualiZarr
+reference stores point the same SQL at NetCDF and GRIB files in place.
+
+The CLI has an extended `DESCRIBE` and per-query I/O stats. Larger scans can
+spread across several nodes.
 
 ```sql
 CREATE EXTERNAL TABLE era5 STORED AS ZARR
@@ -45,31 +49,32 @@ GROUP BY latitude, longitude;
 ### [ogc-edr](https://github.com/stratoscale-io/ogc-edr) · Rust
 
 An [OGC API - Environmental Data Retrieval](https://ogcapi.ogc.org/edr/) server
-over that engine. `position`, `radius`, `area` and `cube` queries become SQL
-pushed down to chunk reads, returned as CoverageJSON, GeoJSON or HTML. Serves
-the public ARCO-ERA5 store with no configuration, or any number of Zarr stores
-from a TOML file — axes, extents, resolution and every parameter are read from
-the stores themselves at startup.
+built on that engine.
 
-Every resource has an HTML representation on the same URL as its JSON, so a
-result page's address *is* the API request that produced it, one `f=` away from
-CoverageJSON.
+`position`, `radius`, `area` and `cube` queries turn into SQL and push down to
+chunk reads. Results come back as CoverageJSON, GeoJSON or HTML. With no
+configuration it serves the public ARCO-ERA5 store. Give it a TOML file and it
+serves as many stores as you list, reading the axes, extents and parameters
+from the stores themselves at startup.
+
+Every resource has an HTML page at the same URL as its JSON. A result page's
+address is the request that produced it, one `f=` away from CoverageJSON.
 
 ## Cookbook
 
-Recipes validated against the reference, not toy examples:
+Each recipe is checked against a reference.
 
-- **[ONI from ERA5](https://github.com/stratoscale-io/zarr-datafusion/tree/main/cookbook/el-nino-oni)** —
-  the Oceanic Niño Index for every overlapping 3-month season since 1950, as one
-  SQL query over public ERA5 on GCS, checked against NOAA's official table:
-  MAE 0.14 °C in the satellite era, Pearson r 0.96, weighted κ 0.85.
-- **[NDVI](https://github.com/stratoscale-io/zarr-datafusion/tree/main/cookbook/ndvi)** —
-  `(b08 - b04) / (b08 + b04)` across two co-registered Sentinel-2 bands as a
-  single SQL projection, matching xarray to four decimals.
+- **[ONI from ERA5](https://github.com/stratoscale-io/zarr-datafusion/tree/main/cookbook/el-nino-oni)**
+  computes the Oceanic Niño Index for every overlapping three-month season
+  since 1950. It's one SQL query over public ERA5 on GCS. In the satellite era
+  it tracks NOAA's official table within 0.14 °C on average, at r = 0.96.
+- **[NDVI](https://github.com/stratoscale-io/zarr-datafusion/tree/main/cookbook/ndvi)**
+  is `(b08 - b04) / (b08 + b04)` over two Sentinel-2 bands, written as a single
+  SQL projection. It matches xarray to four decimals.
 
-Write-ups on the [blog](https://stratoscale.io/blog).
+We write these up on the [blog](https://stratoscale.io/blog).
 
 ## Work with us
 
-Small senior team, hands-on production engagements, deep specialisation in
-cloud-native array data. → [hi@stratoscale.io](mailto:hi@stratoscale.io)
+We're a small senior team specialising in cloud-native array data. We take
+hands-on production work. Write to [hi@stratoscale.io](mailto:hi@stratoscale.io).
